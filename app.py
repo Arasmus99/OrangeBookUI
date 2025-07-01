@@ -1,10 +1,11 @@
 import streamlit as st
 from helpers.generate_merged_df import generate_merged_df
+from helpers.formatting import format_claims
 import io
 import pandas as pd
 
 st.set_page_config(layout="wide")
-st.title("Drug Patent Claim Analyzer")
+st.title("The Orange Bookinator")
 
 # User selects the year
 year = st.number_input("Enter FDA Approval Year", min_value=2000, max_value=2100, value=2025)
@@ -65,4 +66,6 @@ if "patent_df" in st.session_state:
     selected_patent = st.selectbox("Select Patent Number", filtered_df["Patent Number"].dropna().unique())
     selected_row = df[df["Patent Number"] == selected_patent]
     if not selected_row.empty:
-        st.text_area("Patent Claims", selected_row["Claims"].values[0], height=300)
+        raw_claims = selected_row["Claims"].values[0]
+        formatted_claims = format_claims(raw_claims)
+        st.text_area("Patent Claims", formatted_claims, height=500)
