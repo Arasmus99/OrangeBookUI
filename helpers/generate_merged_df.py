@@ -45,8 +45,10 @@ def parse_patent_google(patent_number):
     response = requests.get(url, headers=HEADERS)
     if response.status_code != 200:
         return None
-
+    response = requests.get(url, headers=HEADERS)
+    response.encoding = 'utf-8'  # or 'utf-8-sig' if needed
     soup = BeautifulSoup(response.text, "html.parser")
+
     assignee_tag = soup.find("dd", itemprop="assigneeOriginal")
     assignee = assignee_tag.text.strip() if assignee_tag else "Unknown"
 
