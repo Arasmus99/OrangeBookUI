@@ -1,17 +1,24 @@
-import re
-
 def format_claims(text):
-    # Remove leading 'claims' headers if present
-    text = re.sub(r'^claims.*?:', '', text, flags=re.IGNORECASE).strip()
+    # Remove initial 'claims (n)' header if present
+    lowered = text.lower()
+    if lowered.startswith("claims"):
+        text = text[text.find(":") + 1:].strip() if ":" in text else text[text.find(")") + 1:].strip()
 
-    # Insert two newlines before each claim number at the start or after a period
-    formatted = re.sub(r'(?<=\\s)(\\d+\\.\\s)', r'\\n\\n\\1', text)
-    formatted = re.sub(r'^(\\d+\\.\\s)', r'\\n\\n\\1', formatted)
+    # Split on occurrences like '1. ', '2. ', etc.
+    parts = []
+    temp = text.split()
+    current_claim = []
+    for word in temp:
+        if word[:-1].isdigit() and word.endswith('.'):
+            if current_claim:
+                parts.append(' '.join(current_claim).strip())
+            current_claim = [word]
+        else:
+            current_claim.append(word)
+    if current_claim:
+        parts.append(' '.join(current_claim).strip())
 
-    # Remove excess spaces for consistency
-    formatted = re.sub(r'\\s+', ' ', formatted)
+    # Join with double newlines for clean separation
+    formatted = "\\n\\n".join(parts)
 
-    # Ensure actual newlines (not escaped backslashes)
-    formatted = formatted.replace(' \\n\\n', '\\n\\n').replace('\\n\\n', '\\n\\n')
-
-    return formatted.strip()
+    return formatted
