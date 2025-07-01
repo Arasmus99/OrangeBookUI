@@ -50,7 +50,7 @@ show_amorphous = st.sidebar.checkbox("Show Amorphous", value=False)
 
 # === Main Title ===
 st.title("🔬 The Orange Bookinator")
-st.caption("Automated extraction and analysis of solid-form, salt, and amorphous patent claims.")
+st.caption("Automated extraction and analysis of novel drugs with therapeutic equivalence patent claims.")
 
 if "patent_df" in st.session_state and st.session_state["patent_df"] is not None:
     df = st.session_state["patent_df"]
