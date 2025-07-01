@@ -4,6 +4,7 @@ import pandas as pd
 import zipfile
 import io
 import time
+import unicodedata
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
@@ -49,8 +50,12 @@ def parse_patent_google(patent_number):
     assignee_tag = soup.find("dd", itemprop="assigneeOriginal")
     assignee = assignee_tag.text.strip() if assignee_tag else "Unknown"
 
+    # Extract claims block
     claims_block = soup.find("section", itemprop="claims")
-    claims = claims_block.get_text(separator=' ', strip=True).lower() if claims_block else ""
+    claims = claims_block.get_text(separator=' ', strip=True) if claims_block else ""
+
+    # Normalize unicode to clean artifacts
+    claims = unicodedata.normalize("NFKC", claims)
 
     def found(text, keywords):
         return any(kw in text for kw in keywords)
