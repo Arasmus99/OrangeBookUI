@@ -68,4 +68,5 @@ if "patent_df" in st.session_state:
     if not selected_row.empty:
         raw_claims = selected_row["Claims"].values[0]
         formatted_claims = format_claims(raw_claims)
-        st.markdown(f"### Patent Claims\\n\\n```\n{formatted_claims}\n```")
+        st.markdown(f"#### Formatted Claims for Patent {selected_patent}")
+        st.markdown(formatted_claims.replace('\\n', '  \\n'))
