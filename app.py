@@ -13,9 +13,9 @@ st.sidebar.markdown("---")
 mode = st.sidebar.radio("Select Data Mode:", ["Single Year", "Range"], horizontal=True)
 
 if mode == "Single Year":
-    year = st.sidebar.number_input("Enter FDA Approval Year", min_value=2000, max_value=2100, value=2025)
+    year = st.sidebar.number_input("Enter FDA Approval Year", min_value=2021, max_value=2100, value=2025)
 else:
-    year_range = st.sidebar.slider("Select FDA Approval Year Range", min_value=2000, max_value=2100, value=(2021, 2025))
+    year_range = st.sidebar.slider("Select FDA Approval Year Range", min_value=2021, max_value=2100, value=(2021, 2025))
 
 # === Fetch Button ===
 if st.sidebar.button("Fetch and Analyze Patents"):
