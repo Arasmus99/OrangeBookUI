@@ -5,13 +5,13 @@ from helpers.formatting import format_claims
 
 # ========== Streamlit Page Config ==========
 st.set_page_config(
-    page_title="Drug Patent Claim Analyzer",
+    page_title="The Orange Bookinator",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ========== Sidebar with Firm Branding ==========
-st.sidebar.image("firm_logo.png", use_column_width=True)
+st.sidebar.image("firm_logo.png", use_container_width=True)
 st.sidebar.markdown("---")
 st.sidebar.header("🔍 Filter Patents")
 year = st.sidebar.number_input("FDA Approval Year", min_value=2000, max_value=2100, value=2025)
