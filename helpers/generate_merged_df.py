@@ -108,7 +108,14 @@ def generate_merged_df(year):
         if result:
             for field in ["Crystalline", "SF", "Amorphous", "Salt", "Assignee", "Claims"]:
                 merged_df.loc[merged_df["Patent_No"] == patent, field] = result[field]
+    columns_to_drop = [
+    "index", "DF;Route", "Trade_Name", "Applicant", "Strength",
+    "Appl_Type_x", "Appl_No", "Product_No", "TE_Code",
+    "RLD", "RS", "Type", "Appl_Type_y", "Patent_Use_Code", "Delist_Flag", "Submission_Date"
+    ]
 
+    # Drop only if they exist
+    merged_df.drop(columns=[col for col in columns_to_drop if col in merged_df.columns], inplace=True)
     merged_df.rename(columns={
         "Patent_Expire_Date_Text": "Expiration Date",
         "Drug_Substance_Flag": "DS",
