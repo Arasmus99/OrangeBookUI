@@ -45,18 +45,21 @@ def parse_patent_google(patent_number):
     response = requests.get(url, headers=HEADERS)
     if response.status_code != 200:
         return None
-    response = requests.get(url, headers=HEADERS)
-    response.encoding = 'utf-8'  # or 'utf-8-sig' if needed
-    soup = BeautifulSoup(response.text, "html.parser")
+    response.encoding = response.apparent_encoding  # let requests detect encoding
+    decoded_content = response.content.decode(response.encoding, errors='replace')
+    soup = BeautifulSoup(decoded_content, "html.parser")
 
     assignee_tag = soup.find("dd", itemprop="assigneeOriginal")
     assignee = assignee_tag.text.strip() if assignee_tag else "Unknown"
 
-    # Extract claims block
+    # extract
     claims_block = soup.find("section", itemprop="claims")
     claims = claims_block.get_text(separator=' ', strip=True) if claims_block else ""
-
-    # Normalize unicode to clean artifacts
+    
+    # optional cleanup
+    claims = claims.replace('\xa0', ' ').replace('\u2014', '-').replace('\u2013', '-')
+    
+    # normalize unicode
     claims = unicodedata.normalize("NFKC", claims)
 
     def found(text, keywords):
