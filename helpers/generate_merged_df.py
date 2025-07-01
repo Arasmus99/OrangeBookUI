@@ -12,7 +12,10 @@ HEADERS = {
 }
 
 def scrape_fda_novel_approvals(year):
-    url = f"https://www.fda.gov/drugs/novel-drug-approvals-fda/novel-drug-approvals-{year}"
+    if 2015 <= year <= 2020:
+        url = f"https://web.archive.org/web/20240428045412/https://www.fda.gov/drugs/novel-drug-approvals-fda/novel-drug-approvals-{year}"
+    else:
+        url = f"https://www.fda.gov/drugs/novel-drug-approvals-fda/novel-drug-approvals-{year}"
     response = requests.get(url, headers=HEADERS)
     response.raise_for_status()
 
@@ -20,7 +23,14 @@ def scrape_fda_novel_approvals(year):
     table = soup.find("table")
     df_list = pd.read_html(str(table))
     fda_df = df_list[0]
+    
     fda_df.columns = [col.strip() for col in fda_df.columns]
+    
+    # Normalize column headers for consistency
+    if "Drug  Name" in fda_df.columns:
+        fda_df.rename(columns={"Drug  Name": "Drug Name"}, inplace=True)
+    if "Active Ingredient" not in fda_df.columns:
+        fda_df["Active Ingredient"] = None  # Fallback if missing
     return fda_df
 
 def normalize(text):
