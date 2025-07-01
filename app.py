@@ -58,7 +58,7 @@ if "patent_df" in st.session_state:
     buffer.close()
     with open("Patent_Data.xlsx", "rb") as file:
         st.download_button(
-            label="📥 Download Table as Excel",
+            label="📥 Download Current Table as Excel",
             data=file,
             file_name="Patent_Data.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
