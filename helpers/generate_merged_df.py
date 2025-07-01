@@ -5,6 +5,7 @@ import zipfile
 import io
 import time
 import unicodedata
+import ftfy
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
@@ -45,21 +46,25 @@ def parse_patent_google(patent_number):
     response = requests.get(url, headers=HEADERS)
     if response.status_code != 200:
         return None
-    response.encoding = response.apparent_encoding  # let requests detect encoding
-    decoded_content = response.content.decode(response.encoding, errors='replace')
+
+    decoded_content = response.content.decode('utf-8', errors='replace')
     soup = BeautifulSoup(decoded_content, "html.parser")
 
     assignee_tag = soup.find("dd", itemprop="assigneeOriginal")
     assignee = assignee_tag.text.strip() if assignee_tag else "Unknown"
 
-    # extract
     claims_block = soup.find("section", itemprop="claims")
     claims = claims_block.get_text(separator=' ', strip=True) if claims_block else ""
-    
-    # optional cleanup
-    claims = claims.replace('\xa0', ' ').replace('\u2014', '-').replace('\u2013', '-')
-    
-    # normalize unicode
+
+    # Fix text using ftfy
+    claims = ftfy.fix_text(claims)
+
+    # Replace various dash-like Unicode characters with standard ASCII hyphen
+    dash_chars = ['\u2010', '\u2011', '\u2012', '\u2013', '\u2014', '\u2212']
+    for dash in dash_chars:
+        claims = claims.replace(dash, '-')
+
+    # Normalize for consistency
     claims = unicodedata.normalize("NFKC", claims)
 
     def found(text, keywords):
