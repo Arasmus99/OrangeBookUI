@@ -27,8 +27,8 @@ if st.sidebar.button("Fetch and Analyze Patents"):
         st.success("✅ Data loaded successfully!")
 
 # ========== Main Display Area ==========
-st.title("🔬 Drug Patent Claim Analyzer")
-st.caption("Automated extraction and analysis of solid-form, salt, and amorphous patent claims for your firm's workflow.")
+st.title("🔬 The Orange Bookinator")
+st.caption("Automated extraction and analysis of solid-form, salt, and amorphous patent claims")
 
 if "patent_df" in st.session_state:
     df = st.session_state["patent_df"]
