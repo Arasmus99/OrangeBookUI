@@ -1,10 +1,10 @@
 def format_claims(text):
-    # Remove initial 'claims (n)' header if present
+    # Remove initial 'claims' header if present
     lowered = text.lower()
     if lowered.startswith("claims"):
         text = text[text.find(":") + 1:].strip() if ":" in text else text[text.find(")") + 1:].strip()
 
-    # Split on occurrences like '1. ', '2. ', etc.
+    # Split text into claims using ' n. ' pattern
     parts = []
     temp = text.split()
     current_claim = []
@@ -18,7 +18,7 @@ def format_claims(text):
     if current_claim:
         parts.append(' '.join(current_claim).strip())
 
-    # Join with double newlines for clean separation
-    formatted = "\\n\\n".join(parts)
+    # ✅ Use *real* newlines:
+    formatted = "\n\n".join(parts)
 
-    return formatted
+    return formatted.strip()
