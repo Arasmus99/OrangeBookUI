@@ -9,15 +9,17 @@ st.sidebar.image("firm_logo.png", use_container_width=True)
 st.sidebar.markdown("---")
 st.sidebar.header("🔍 Filter Patents")
 year = st.sidebar.number_input("FDA Approval Year", min_value=2000, max_value=2100, value=2025)
-show_crystalline = st.sidebar.checkbox("Show Crystalline", value=False)
-show_salt = st.sidebar.checkbox("Show Salt", value=False)
-show_amorphous = st.sidebar.checkbox("Show Amorphous", value=False)
 
 if st.sidebar.button("Fetch and Analyze Patents"):
     with st.spinner("Fetching FDA data, Orange Book data, and parsing Google Patents. This may take a few minutes..."):
         df = generate_merged_df(year)
         st.session_state["patent_df"] = df
         st.success("✅ Data loaded successfully!")
+
+st.sidebar.markdown("### Filter Results By")
+show_crystalline = st.sidebar.checkbox("Show Crystalline", value=False)
+show_salt = st.sidebar.checkbox("Show Salt", value=False)
+show_amorphous = st.sidebar.checkbox("Show Amorphous", value=False)
 
 st.title("🔬 The Orange Bookinator")
 st.caption("Automated extraction and analysis of solid-form, salt, and amorphous patent claims.")
