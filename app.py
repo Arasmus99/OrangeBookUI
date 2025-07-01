@@ -62,6 +62,18 @@ if "patent_df" in st.session_state:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    st.markdown("### Debug Raw Formatted Claims")
-    st.code(repr(formatted_claims), language='python')
+    st.markdown("### View Claims for a Selected Patent")
+    selected_patent = st.selectbox("Select Patent Number", filtered_df["Patent Number"].dropna().unique())
+    selected_row = df[df["Patent Number"] == selected_patent]
+    if not selected_row.empty:
+        raw_claims = selected_row["Claims"].values[0]
+        formatted_claims = format_claims(raw_claims)
+    
+        # 🚨 Debug: Show the raw formatted_claims for diagnosis
+        st.markdown("### Debug Raw Formatted Claims")
+        st.code(repr(formatted_claims), language='python')
+    
+        # Your normal display
+        st.text_area("Patent Claims", formatted_claims, height=700)
+
 
