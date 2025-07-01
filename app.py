@@ -1,5 +1,5 @@
 import streamlit as st
-from helpers.data_loader import generate_merged_df
+from helpers.generate_merged_df import generate_merged_df
 
 st.set_page_config(layout="wide")
 st.title("Drug Patent Claim Analyzer")
