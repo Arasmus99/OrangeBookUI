@@ -9,13 +9,20 @@ st.sidebar.image("firm_logo.png", use_container_width=True)
 st.sidebar.markdown("---")
 st.sidebar.header("🔍 Filter Patents")
 
-# Allow range of years
-year_range = st.sidebar.slider("FDA Approval Year Range", min_value=2000, max_value=2100, value=(2020, 2025))
+# Allow user to enter a year or select a range
+mode = st.sidebar.radio("Select input mode:", ["Single Year", "Year Range"])
+
+if mode == "Single Year":
+    year = st.sidebar.number_input("Enter FDA Approval Year", min_value=2000, max_value=2100, value=2025)
+    year_list = [year]
+else:
+    year_range = st.sidebar.slider("Select FDA Approval Year Range", min_value=2000, max_value=2100, value=(2020, 2025))
+    year_list = list(range(year_range[0], year_range[1] + 1))
 
 if st.sidebar.button("Fetch and Analyze Patents"):
     with st.spinner("Fetching data from FDA Novel Drug Approvals, Orange Book, and Google Patents. This may take a few minutes..."):
         dfs = []
-        for year in range(year_range[0], year_range[1] + 1):
+        for year in year_list:
             try:
                 df_year = generate_merged_df(year)
                 dfs.append(df_year)
@@ -24,9 +31,12 @@ if st.sidebar.button("Fetch and Analyze Patents"):
         if dfs:
             df = pd.concat(dfs, ignore_index=True)
             st.session_state["patent_df"] = df
-            st.success(f"✅ Data loaded successfully for {year_range[0]} - {year_range[1]}!")
+            if len(year_list) == 1:
+                st.success(f"✅ Data loaded successfully for {year_list[0]}!")
+            else:
+                st.success(f"✅ Data loaded successfully for {year_list[0]} - {year_list[-1]}!")
         else:
-            st.error("No data fetched. Please check your year range or try again later.")
+            st.error("No data fetched. Please check your input or try again later.")
 
 st.sidebar.markdown("### Filter Results By")
 show_crystalline = st.sidebar.checkbox("Show Crystalline", value=False)
@@ -89,7 +99,7 @@ if "patent_df" in st.session_state:
             key="claims_text_area"
         )
 else:
-    st.info("Use the sidebar to fetch and analyze patent data for the selected year range.")
+    st.info("Use the sidebar to fetch and analyze patent data for the selected year or range.")
 
 st.markdown("---")
 st.caption("© 2025 Barash Law LLC | Confidential | Internal Use Only")
