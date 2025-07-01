@@ -1,30 +1,37 @@
 import streamlit as st
+import pandas as pd
 from helpers.generate_merged_df import generate_merged_df
 from helpers.formatting import format_claims
-import io
-import pandas as pd
 
-st.set_page_config(layout="wide")
-st.title("The Orange Bookinator")
+# ========== Streamlit Page Config ==========
+st.set_page_config(
+    page_title="Drug Patent Claim Analyzer",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# User selects the year
-year = st.number_input("Enter FDA Approval Year", min_value=2000, max_value=2100, value=2025)
+# ========== Sidebar with Firm Branding ==========
+st.sidebar.image("firm_logo.png", use_column_width=True)
+st.sidebar.markdown("---")
+st.sidebar.header("🔍 Filter Patents")
+year = st.sidebar.number_input("FDA Approval Year", min_value=2000, max_value=2100, value=2025)
 
-if st.button("Fetch Data"):
-    with st.spinner("Loading and parsing data. This may take a minute..."):
+show_crystalline = st.sidebar.checkbox("Show Crystalline", value=False)
+show_salt = st.sidebar.checkbox("Show Salt", value=False)
+show_amorphous = st.sidebar.checkbox("Show Amorphous", value=False)
+
+if st.sidebar.button("Fetch and Analyze Patents"):
+    with st.spinner("Fetching FDA data, Orange Book data, and parsing Google Patents. This may take a few minutes..."):
         df = generate_merged_df(year)
-        st.session_state["patent_df"] = df.copy()
-        st.success("Data loaded successfully!")
+        st.session_state["patent_df"] = df
+        st.success("✅ Data loaded successfully!")
 
-# Display data if available
+# ========== Main Display Area ==========
+st.title("🔬 Drug Patent Claim Analyzer")
+st.caption("Automated extraction and analysis of solid-form, salt, and amorphous patent claims for your firm's workflow.")
+
 if "patent_df" in st.session_state:
     df = st.session_state["patent_df"]
-
-    # Sidebar filters
-    st.sidebar.header("Filter by Patent Type")
-    show_crystalline = st.sidebar.checkbox("Crystalline", value=False)
-    show_salt = st.sidebar.checkbox("Salt", value=False)
-    show_amorphous = st.sidebar.checkbox("Amorphous", value=False)
 
     filtered_df = df.copy()
     if show_crystalline:
@@ -34,38 +41,45 @@ if "patent_df" in st.session_state:
     if show_amorphous:
         filtered_df = filtered_df[filtered_df["Amorphous"] == True]
 
-    # Drop 'Claims' column for display only
-    display_df = filtered_df.drop(columns=["Claims"], errors="ignore")
-
-    st.markdown("### Editable Patent Data Table")
+    st.subheader("📋 Editable Patent Data Table")
     edited_df = st.data_editor(
-        display_df,
+        filtered_df.drop(columns=["Claims"], errors='ignore'),
         num_rows="dynamic",
         use_container_width=True,
         key="editable_table"
     )
 
-    # Update the main df with edited changes to reflect checkbox edits permanently
-    for col in ["Crystalline", "Salt", "Amorphous"]:
-        if col in edited_df.columns:
-            df[col] = edited_df[col]
-    st.session_state["patent_df"] = df
+    # Download Button for Excel Export
+    buffer = pd.ExcelWriter("Patent_Data.xlsx", engine="xlsxwriter")
+    edited_df.to_excel(buffer, index=False, sheet_name="Patent Data")
+    buffer.close()
+    with open("Patent_Data.xlsx", "rb") as file:
+        st.download_button(
+            label="📥 Download Table as Excel",
+            data=file,
+            file_name="Patent_Data.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
 
-    # Download button for Excel export
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-        edited_df.to_excel(writer, index=False, sheet_name="Patent Data")
-    st.download_button(
-        label="📥 Download Table as Excel",
-        data=buffer.getvalue(),
-        file_name="drug_patent_data.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    # Claims Viewer Section
+    st.subheader("📑 View Patent Claims")
+    selected_patent = st.selectbox("Select Patent Number to View Claims:", edited_df["Patent Number"].dropna().unique())
 
-    st.markdown("### View Claims for a Selected Patent")
-    selected_patent = st.selectbox("Select Patent Number", filtered_df["Patent Number"].dropna().unique())
     selected_row = df[df["Patent Number"] == selected_patent]
     if not selected_row.empty:
         raw_claims = selected_row["Claims"].values[0]
         formatted_claims = format_claims(raw_claims)
-        st.text_area("Patent Claims", formatted_claims, height=700)
+
+        st.markdown("#### Patent Claims")
+        st.text_area(
+            label="Claims (formatted for review and copy-paste):",
+            value=formatted_claims,
+            height=700,
+            key="claims_text_area"
+        )
+else:
+    st.info("Use the sidebar to fetch and analyze patent data for the selected year.")
+
+# ========== Footer Branding (Optional) ==========
+st.markdown("---")
+st.caption("© 2025 Barash Law LLC | Confidential | Internal Use Only")
