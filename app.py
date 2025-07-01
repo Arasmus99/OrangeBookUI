@@ -82,17 +82,17 @@ if "patent_df" in st.session_state:
         st.session_state["patent_df"] = df
 
     # Write Excel file
-with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
-    edited_df.to_excel(writer, index=False, sheet_name="Patent Data")
-
-# Read and download the file
-with open(filename, "rb") as file:
-    st.download_button(
-        label="📥 Download Table as Excel",
-        data=file,
-        file_name=filename,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+    with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
+        edited_df.to_excel(writer, index=False, sheet_name="Patent Data")
+    
+    # Read and download the file
+    with open(filename, "rb") as file:
+        st.download_button(
+            label="📥 Download Table as Excel",
+            data=file,
+            file_name=filename,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
     
     st.subheader("📑 View Patent Claims")
     selected_patent = st.selectbox("Select Patent Number to View Claims:", edited_df["Patent Number"].dropna().unique())
