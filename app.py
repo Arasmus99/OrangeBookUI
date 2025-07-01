@@ -13,10 +13,10 @@ st.sidebar.header("🔍 Filter Patents")
 mode = st.sidebar.radio("Select input mode:", ["Single Year", "Year Range"])
 
 if mode == "Single Year":
-    year = st.sidebar.number_input("Enter FDA Approval Year", min_value=1980, max_value=2100, value=2025)
+    year = st.sidebar.number_input("Enter FDA Approval Year", min_value=2021, max_value=2100, value=2025)
     year_list = [year]
 else:
-    year_range = st.sidebar.slider("Select FDA Approval Year Range", min_value=1980, max_value=2100, value=(2020, 2025))
+    year_range = st.sidebar.slider("Select FDA Approval Year Range", min_value=2021, max_value=2100, value=(2021, 2025))
     year_list = list(range(year_range[0], year_range[1] + 1))
 
 if st.sidebar.button("Fetch and Analyze Patents"):
