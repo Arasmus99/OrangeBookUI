@@ -19,24 +19,29 @@ else:
     year_range = st.sidebar.slider("Select FDA Approval Year Range", min_value=2021, max_value=2100, value=(2021, 2025))
     year_list = list(range(year_range[0], year_range[1] + 1))
 
+if "patent_df" not in st.session_state:
+    st.session_state["patent_df"] = None
+
 if st.sidebar.button("Fetch and Analyze Patents"):
-    with st.spinner("Fetching data from FDA Novel Drug Approvals, Orange Book, and Google Patents. This may take a few minutes..."):
+    with st.spinner("Fetching data, please wait..."):
         dfs = []
         for year in year_list:
             try:
                 df_year = generate_merged_df(year)
-                dfs.append(df_year)
+                if not df_year.empty:
+                    dfs.append(df_year)
+                    st.success(f"✅ Loaded {year} with {len(df_year)} records.")
+                else:
+                    st.warning(f"⚠️ No data found for {year}.")
             except Exception as e:
-                st.warning(f"Year {year} failed to fetch: {e}")
+                st.warning(f"⚠️ Failed to fetch {year}: {e}")
+
         if dfs:
-            df = pd.concat(dfs, ignore_index=True)
-            st.session_state["patent_df"] = df
-            if len(year_list) == 1:
-                st.success(f"✅ Data loaded successfully for {year_list[0]}!")
-            else:
-                st.success(f"✅ Data loaded successfully for {year_list[0]} - {year_list[-1]}!")
+            df_all = pd.concat(dfs, ignore_index=True)
+            st.session_state["patent_df"] = df_all
+            st.success(f"✅ Loaded {len(df_all)} records across {year_list[0]}-{year_list[-1]}")
         else:
-            st.error("No data fetched. Please check your input or try again later.")
+            st.error("❌ No data fetched for the selected years.")
 
 st.sidebar.markdown("### Filter Results By")
 show_crystalline = st.sidebar.checkbox("Show Crystalline", value=False)
@@ -74,17 +79,24 @@ if "patent_df" in st.session_state:
                         df.loc[mask, col] = row[col]
         st.session_state["patent_df"] = df
 
-    buffer = pd.ExcelWriter("Patent_Data.xlsx", engine="xlsxwriter")
+    buffer = pd.ExcelWriter(f"Patent_Data_{.xlsx", engine="xlsxwriter")
     edited_df.to_excel(buffer, index=False, sheet_name="Patent Data")
     buffer.close()
     with open("Patent_Data.xlsx", "rb") as file:
-        st.download_button(
-            label="📥 Download Table as Excel",
-            data=file,
-            file_name="Patent_Data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
+        if mode == "Single Year":
+            st.download_button(
+                label="📥 Download Table as Excel",
+                data=file,
+                file_name=f"Patent_Data_{Year}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        else:
+              st.download_button(
+                label="📥 Download Table as Excel",
+                data=file,
+                file_name=f"Patent_Data_{Year_Range}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
     st.subheader("📑 View Patent Claims")
     selected_patent = st.selectbox("Select Patent Number to View Claims:", edited_df["Patent Number"].dropna().unique())
     selected_row = df[df["Patent Number"] == selected_patent]
