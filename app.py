@@ -72,7 +72,7 @@ if "patent_df" in st.session_state:
         formatted_claims = format_claims(raw_claims)
         st.markdown("#### Patent Claims")
         st.text_area(
-            label="Claims (formatted for review and copy-paste):",
+            label="What is claimed is:",
             value=formatted_claims,
             height=700,
             key="claims_text_area"
