@@ -9,9 +9,9 @@ from io import BytesIO
 # === Regex Patterns ===
 PATTERNS = {
     "docket_number": re.compile(
-        r"\b\d{4}-[A-Z]{2,}-\d{5}-\d{2}\b"
-        r"|\b\d{5}-\d{2}\b"
-        r"|\b\d{5}-\d{4}-\d{2}[A-Z]{2,4}\b"
+        r"\b\d{4}-[A-Z]{2,}-\d{5}-\d{2}\b"           # e.g. 2018-LOW-68327-13
+        r"|\b\d{5}-\d{2}\b"                           # e.g. 68327-13
+        r"|\b\d{5}-\d{4}-\d{2}[A-Z]{2,4}\b"           # e.g. 01330-0004-00US
     ),
     "application_number": re.compile(r"\b\d{2}/\d{3}[,]?\d{3}\s+[A-Z]{2}\b"),
     "alt_application_number": re.compile(
@@ -23,6 +23,18 @@ PATTERNS = {
 }
 
 SKIP_PHRASES = ["PENDING", "ABANDONED", "WITHDRAWN", "GRANTED", "ISSUED", "STRUCTURE"]
+
+# === Recursive text extraction for GroupShapes ===
+def extract_texts_from_shape_recursive(shape):
+    texts = []
+    if shape.shape_type == 6:  # GroupShape
+        for shp in shape.shapes:
+            texts.extend(extract_texts_from_shape_recursive(shp))
+    else:
+        text = extract_text_from_shape(shape)
+        if text:
+            texts.append(text)
+    return texts
 
 def extract_text_from_shape(shape):
     if shape.has_text_frame:
@@ -88,36 +100,32 @@ def extract_from_pptx(upload, months_back):
     results = []
 
     for slide_num, slide in enumerate(prs.slides, start=1):
-        for shape in slide.shapes:
-            text = extract_text_from_shape(shape)
-            if not text or not should_include(text):
-                continue
+        for shape_num, shape in enumerate(slide.shapes, start=1):
+            texts = extract_texts_from_shape_recursive(shape)
+            for text in texts:
+                if not should_include(text):
+                    continue
+                entries = extract_entries_from_textbox(text, months_back)
+                for entry in entries:
+                    results.append({
+                        "Slide": slide_num,
+                        "Textbox Content": entry["raw_text"],
+                        "Docket Number": entry["docket_number"],
+                        "Application Number": entry["application_number"],
+                        "PCT Number": entry["pct_number"],
+                        "Due Dates": "; ".join(entry["due_dates"])
+                    })
 
-            entries = extract_entries_from_textbox(text, months_back)
-            for entry in entries:
-                results.append({
-                    "Slide": slide_num,
-                    "Textbox Content": entry["raw_text"],
-                    "Docket Number": entry["docket_number"],
-                    "Application Number": entry["application_number"],
-                    "PCT Number": entry["pct_number"],
-                    "Due Dates": "; ".join(entry["due_dates"])
-                })
+    if not results:
+        return pd.DataFrame(columns=["Slide", "Textbox Content", "Docket Number", "Application Number", "PCT Number", "Due Dates"])
 
     df = pd.DataFrame(results)
-
-    if df.empty:
-        return pd.DataFrame(columns=[
-            "Slide", "Textbox Content", "Docket Number",
-            "Application Number", "PCT Number", "Due Dates"
-        ])
-
     df["Earliest Due Date"] = df["Due Dates"].apply(get_earliest_due_date)
     df = df.sort_values(by="Earliest Due Date", ascending=True).drop(columns=["Earliest Due Date"])
     return df
 
 # === Streamlit UI ===
-st.title("📊 PowerPoint Patent Extractor")
+st.title("\U0001F4CA PowerPoint Patent Extractor")
 ppt_files = st.file_uploader("Upload one or more PowerPoint (.pptx) files", type="pptx", accept_multiple_files=True)
 months_back = st.slider("Include due dates up to this many months in the past:", 0, 24, 0)
 
@@ -125,14 +133,18 @@ if ppt_files:
     all_dfs = []
     for ppt_file in ppt_files:
         df = extract_from_pptx(ppt_file, months_back)
+        if df.empty:
+            st.warning(f"⚠️ No extractable data found in {ppt_file.name}.")
+            continue
         df["Filename"] = ppt_file.name
         all_dfs.append(df)
 
-    final_df = pd.concat(all_dfs, ignore_index=True)
-    st.success(f"✅ Extracted {len(final_df)} entries from {len(ppt_files)} file(s).")
-    st.dataframe(final_df, use_container_width=True)
+    if all_dfs:
+        final_df = pd.concat(all_dfs, ignore_index=True)
+        st.success(f"✅ Extracted {len(final_df)} entries from {len(all_dfs)} file(s).")
+        st.dataframe(final_df, use_container_width=True)
 
-    output = BytesIO()
-    final_df.to_excel(output, index=False)
-    output.seek(0)
-    st.download_button("📥 Download Excel", output, file_name="combined_extracted_data.xlsx")
+        output = BytesIO()
+        final_df.to_excel(output, index=False)
+        output.seek(0)
+        st.download_button("\U0001F4E5 Download Excel", output, file_name="combined_extracted_data.xlsx")
