@@ -9,9 +9,9 @@ from io import BytesIO
 # === Regex Patterns ===
 PATTERNS = {
     "docket_number": re.compile(
-        r"\b\d{4}-[A-Z]{2,}-\d{5}-\d{2}\b"           # e.g. 2018-LOW-68327-13
-        r"|\b\d{5}-\d{2}\b"                           # e.g. 68327-13
-        r"|\b\d{5}-\d{4}-\d{2}[A-Z]{2,4}\b"           # e.g. 01330-0004-00US
+        r"\b\d{4}-[A-Z]{2,}-\d{5}-\d{2}\b"
+        r"|\b\d{5}-\d{2}\b"
+        r"|\b\d{5}-\d{4}-\d{2}[A-Z]{2,4}\b"
     ),
     "application_number": re.compile(r"\b\d{2}/\d{3}[,]?\d{3}\s+[A-Z]{2}\b"),
     "alt_application_number": re.compile(
@@ -105,6 +105,13 @@ def extract_from_pptx(upload, months_back):
                 })
 
     df = pd.DataFrame(results)
+
+    if df.empty:
+        return pd.DataFrame(columns=[
+            "Slide", "Textbox Content", "Docket Number",
+            "Application Number", "PCT Number", "Due Dates"
+        ])
+
     df["Earliest Due Date"] = df["Due Dates"].apply(get_earliest_due_date)
     df = df.sort_values(by="Earliest Due Date", ascending=True).drop(columns=["Earliest Due Date"])
     return df
@@ -118,14 +125,13 @@ if ppt_files:
     all_dfs = []
     for ppt_file in ppt_files:
         df = extract_from_pptx(ppt_file, months_back)
-        df["Filename"] = ppt_file.name  # Add source filename
+        df["Filename"] = ppt_file.name
         all_dfs.append(df)
 
     final_df = pd.concat(all_dfs, ignore_index=True)
     st.success(f"✅ Extracted {len(final_df)} entries from {len(ppt_files)} file(s).")
     st.dataframe(final_df, use_container_width=True)
 
-    # Download
     output = BytesIO()
     final_df.to_excel(output, index=False)
     output.seek(0)
