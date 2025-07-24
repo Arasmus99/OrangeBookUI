@@ -1,7 +1,5 @@
 streamlit
+python-pptx
 pandas
-requests
-beautifulsoup4
-lxml
-XlsxWriter
-ftfy
+python-dateutil
+openpyxl
