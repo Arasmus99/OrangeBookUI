@@ -12,7 +12,7 @@ PATTERNS = {
         r"\b\d{4}-[A-Z]{2,}-\d{5}-\d{2}\b"           # e.g. 2018-LOW-68327-13
         r"|\b\d{5}-\d{2}\b"                           # e.g. 68327-13
         r"|\b\d{5}-\d{4}-\d{2}[A-Z]{2,4}\b"           # e.g. 01330-0004-00US
-        r"|\b\d{4}\.\d{3}-?[A-Z]{2,}\b"              # e.g. 0509.003US or 0509.003-US
+        r"|\b\d{4}\.\d{3}-?[A-Z]{2,}\d*\b"          # e.g. 0509.003US, 0509.003-US, 0509.0003-US8
         r"|\b\d{4}-\d{4}-[A-Z]{3}\b"                  # e.g. 0509-0001-PCT
     ),
     "application_number": re.compile(r"\b\d{2}/\d{3}[,]?\d{3}\s+[A-Z]{2}\b"),
@@ -73,7 +73,8 @@ def extract_entries_from_textbox(text, months_back=0):
 
     for line in lines:
         clean_line = line.replace(" /,", "/").replace("/", "/").replace(",,", ",").replace(" /", "/")
-        clean_line = re.sub(r"[^0-9A-Za-z/,.\s-]", "", clean_line)  # Remove odd characters
+        clean_line = re.sub(r"[^0-9A-Za-z/,\.\s-]", "", clean_line)  # Remove odd characters
+        clean_line = clean_line.replace(",", "")  # Remove commas inside numbers like 201,375
 
         if not entry["docket_number"] and PATTERNS["docket_number"].search(clean_line):
             entry["docket_number"] = PATTERNS["docket_number"].search(clean_line).group(0)
