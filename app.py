@@ -111,16 +111,22 @@ def extract_from_pptx(upload, months_back):
 
 # === Streamlit UI ===
 st.title("📊 PowerPoint Patent Extractor")
-ppt_file = st.file_uploader("Upload PowerPoint (.pptx)", type="pptx")
+ppt_files = st.file_uploader("Upload one or more PowerPoint (.pptx) files", type="pptx", accept_multiple_files=True)
 months_back = st.slider("Include due dates up to this many months in the past:", 0, 24, 0)
 
-if ppt_file:
-    df = extract_from_pptx(ppt_file, months_back)
-    st.success(f"Extracted {len(df)} entries.")
-    st.dataframe(df, use_container_width=True)
+if ppt_files:
+    all_dfs = []
+    for ppt_file in ppt_files:
+        df = extract_from_pptx(ppt_file, months_back)
+        df["Filename"] = ppt_file.name  # Add source filename
+        all_dfs.append(df)
+
+    final_df = pd.concat(all_dfs, ignore_index=True)
+    st.success(f"✅ Extracted {len(final_df)} entries from {len(ppt_files)} file(s).")
+    st.dataframe(final_df, use_container_width=True)
 
     # Download
     output = BytesIO()
-    df.to_excel(output, index=False)
+    final_df.to_excel(output, index=False)
     output.seek(0)
-    st.download_button("📥 Download Excel", output, file_name="extracted_data.xlsx")
+    st.download_button("📥 Download Excel", output, file_name="combined_extracted_data.xlsx")
