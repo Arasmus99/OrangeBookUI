@@ -132,8 +132,21 @@ def extract_from_pptx(upload, months_back):
         return pd.DataFrame(columns=["Slide", "Textbox Content", "Docket Number", "Application Number", "PCT Number", "WIPO Number", "Due Dates"])
 
     df = pd.DataFrame(results)
+    # Extract actual datetime for sorting, then format back to string for display
     df["Earliest Due Date"] = df["Due Dates"].apply(get_earliest_due_date)
-    df = df.sort_values(by="Earliest Due Date", ascending=True).drop(columns=["Earliest Due Date"])
+    df = df.sort_values(by="Earliest Due Date", ascending=True)
+
+    # Reformat to consistent MM/DD/YYYY string for display (optional)
+    df["Due Dates"] = df["Due Dates"].apply(
+        lambda x: "; ".join(
+            sorted([
+                parse(d.strip(), fuzzy=True).strftime("%m/%d/%Y")
+                for d in x.split(";") if d.strip()
+            ])
+        ) if isinstance(x, str) else x
+    )
+    df = df.drop(columns=["Earliest Due Date"])
+
     return df
 
 # === Streamlit UI ===
