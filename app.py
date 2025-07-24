@@ -166,6 +166,11 @@ if ppt_files:
 
     if all_dfs:
         final_df = pd.concat(all_dfs, ignore_index=True)
+        
+        # Globally sort by earliest due date
+        final_df["Earliest Due Date"] = final_df["Due Dates"].apply(get_earliest_due_date)
+        final_df = final_df.sort_values(by="Earliest Due Date", ascending=True).drop(columns=["Earliest Due Date"])
+        
         st.success(f"✅ Extracted {len(final_df)} entries from {len(all_dfs)} file(s).")
         st.dataframe(final_df, use_container_width=True)
 
