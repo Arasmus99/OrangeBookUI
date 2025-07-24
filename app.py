@@ -72,21 +72,24 @@ def extract_entries_from_textbox(text, months_back=0):
     }
 
     for line in lines:
-        if not entry["docket_number"] and PATTERNS["docket_number"].search(line):
-            entry["docket_number"] = PATTERNS["docket_number"].search(line).group(0)
+        clean_line = line.replace(" /,", "/").replace("/", "/").replace(",,", ",").replace(" /", "/")
+        clean_line = re.sub(r"[^0-9A-Za-z/,.\s-]", "", clean_line)  # Remove odd characters
 
-        if not entry["pct_number"] and PATTERNS["pct_number"].search(line):
-            entry["pct_number"] = PATTERNS["pct_number"].search(line).group(0)
+        if not entry["docket_number"] and PATTERNS["docket_number"].search(clean_line):
+            entry["docket_number"] = PATTERNS["docket_number"].search(clean_line).group(0)
 
-        if not entry["application_number"] and PATTERNS["application_number"].search(line):
-            entry["application_number"] = PATTERNS["application_number"].search(line).group(0)
-        elif not entry["application_number"] and PATTERNS["alt_application_number"].search(line):
-            entry["application_number"] = PATTERNS["alt_application_number"].search(line).group(0)
+        if not entry["pct_number"] and PATTERNS["pct_number"].search(clean_line):
+            entry["pct_number"] = PATTERNS["pct_number"].search(clean_line).group(0)
 
-        if not entry["wipo_number"] and PATTERNS["wipo_number"].search(line):
-            entry["wipo_number"] = PATTERNS["wipo_number"].search(line).group(0)
+        if not entry["application_number"] and PATTERNS["application_number"].search(clean_line):
+            entry["application_number"] = PATTERNS["application_number"].search(clean_line).group(0)
+        elif not entry["application_number"] and PATTERNS["alt_application_number"].search(clean_line):
+            entry["application_number"] = PATTERNS["alt_application_number"].search(clean_line).group(0)
 
-        for match in PATTERNS["date"].findall(line):
+        if not entry["wipo_number"] and PATTERNS["wipo_number"].search(clean_line):
+            entry["wipo_number"] = PATTERNS["wipo_number"].search(clean_line).group(0)
+
+        for match in PATTERNS["date"].findall(clean_line):
             try:
                 parsed = parse(match, dayfirst=False, fuzzy=True)
                 if parsed.date() >= cutoff_date:
