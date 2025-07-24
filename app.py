@@ -22,8 +22,6 @@ PATTERNS = {
     "wipo_number": re.compile(r"\bWO\d{4}/\d{6}\b"),
     "date": re.compile(r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b")
 }
-
-@@ -63,6 +64,7 @@
         "docket_number": None,
         "application_number": None,
         "pct_number": None,
@@ -31,7 +29,7 @@ PATTERNS = {
         "due_dates": [],
         "raw_text": "\n".join(lines)
     }
-@@ -79,6 +81,9 @@
+
         elif not entry["application_number"] and PATTERNS["alt_application_number"].search(line):
             entry["application_number"] = PATTERNS["alt_application_number"].search(line).group(0)
 
@@ -41,7 +39,7 @@ PATTERNS = {
         for match in PATTERNS["date"].findall(line):
             try:
                 parsed = parse(match, dayfirst=False, fuzzy=True)
-@@ -87,7 +92,7 @@
+
             except:
                 continue
 
@@ -50,7 +48,7 @@ PATTERNS = {
         return []
 
     if entry["due_dates"]:
-@@ -113,11 +118,12 @@
+
                         "Docket Number": entry["docket_number"],
                         "Application Number": entry["application_number"],
                         "PCT Number": entry["pct_number"],
