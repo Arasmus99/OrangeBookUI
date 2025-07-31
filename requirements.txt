@@ -1,5 +1,4 @@
 streamlit
-python-pptx
 pandas
 python-dateutil
 openpyxl
