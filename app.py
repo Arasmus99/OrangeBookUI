@@ -1,180 +1,121 @@
+import streamlit as st
 import re
 import pandas as pd
-from pptx import Presentation
-from datetime import date, timedelta
-from dateutil.parser import parse
-import streamlit as st
-from io import BytesIO
+from helpers.generate_merged_df import generate_merged_df
+from helpers.formatting import format_claims
 
-# === Regex Patterns ===
-PATTERNS = {
-    "docket_number": re.compile(
-        r"\b\d{4}-[A-Z]{2,}-\d{5}-\d{2}\b"           # e.g. 2018-LOW-68327-13
-        r"|\b\d{5}-\d{2}\b"                           # e.g. 68327-13
-        r"|\b\d{5}-\d{4}-\d{2}[A-Z]{2,4}\b"           # e.g. 01330-0004-00US
-        r"|\b\d{4}[.-]\d{4}-?[A-Z]{2}\d*\b"           # e.g. 0509.0003-US8 or 0509-0003-US8
-        r"|\b\d{4}-\d{4}-[A-Z]{3}\b"                  # e.g. 0509-0001-PCT
-    ),
-    "application_number": re.compile(r"\b\d{2}/\d{3}[,]?\d{3}\s+[A-Z]{2}\b"),
-    "alt_application_number": re.compile(
-        r"\b[Pp]\d{11}\s+[A-Z]{2}-\w{1,4}\b"
-        r"|\b\d{5,12}(?:[.,]\d+)?\s+[A-Z]{2,3}\b"
-    ),
-    "pct_number": re.compile(r"PCT/[A-Z]{2}\d{4}/\d{6}"),
-    "wipo_number": re.compile(r"\bWO\d{4}/\d{6}\b"),
-    "date": re.compile(r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b")
-}
+st.set_page_config(page_title="Drug Patent Claim Analyzer", layout="wide", initial_sidebar_state="expanded")
 
-SKIP_PHRASES = ["PENDING", "ABANDONED", "WITHDRAWN", "GRANTED", "ISSUED", "STRUCTURE"]
+# === Firm Logo ===
+st.sidebar.image("firm_logo.png", use_container_width=True)
+st.sidebar.markdown("---")
 
-# === Recursive text extraction for GroupShapes ===
-def extract_texts_from_shape_recursive(shape):
-    texts = []
-    if shape.shape_type == 6:  # GroupShape
-        for shp in shape.shapes:
-            texts.extend(extract_texts_from_shape_recursive(shp))
-    else:
-        text = extract_text_from_shape(shape)
-        if text:
-            texts.append(text)
-    return texts
+# === Mode Selection ===
+mode = st.sidebar.radio("Select Data Mode:", ["Single Year", "Range"], horizontal=True)
 
-def extract_text_from_shape(shape):
-    if shape.has_text_frame:
-        return shape.text.strip()
-    return ""
+if mode == "Single Year":
+    year = st.sidebar.number_input("Enter FDA Approval Year", min_value=2021, max_value=2025, value=2025)
+else:
+    year_range = st.sidebar.slider("Select FDA Approval Year Range", min_value=2021, max_value=2025, value=(2021, 2025))
 
-def should_include(text):
-    upper_text = text.upper()
-    return not any(phrase in upper_text for phrase in SKIP_PHRASES)
+# === Fetch Button ===
+if st.sidebar.button("Fetch and Analyze Patents"):
+    with st.spinner("Fetching and analyzing data. This may take several minutes..."):
+        try:
+            if "patent_df" in st.session_state:
+                del st.session_state["patent_df"]  # clear previous state
 
-def get_earliest_due_date(dates_str):
-    if not isinstance(dates_str, str):
-        return pd.NaT
-    try:
-        dates = [parse(d.strip(), dayfirst=False, fuzzy=True) for d in dates_str.split(";") if d.strip()]
-        return min(dates) if dates else pd.NaT
-    except:
-        return pd.NaT
+            if mode == "Single Year":
+                st.sidebar.write(f"Scraping data for **{year}**...")
+                df = generate_merged_df(year)
+                df["Approval_Year"] = year
+            else:
+                dfs = []
+                for yr in range(year_range[0], year_range[1] + 1):
+                    st.sidebar.write(f"Scraping data for **{yr}**...")
+                    df_year = generate_merged_df(yr)
+                    df_year["Approval_Year"] = yr
+                    dfs.append(df_year)
+                df = pd.concat(dfs, ignore_index=True)
 
-def extract_entries_from_textbox(text, months_back=0):
-    entries = []
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    cutoff_date = date.today() - timedelta(days=30 * months_back)
+            st.session_state["patent_df"] = df
+            st.success("✅ Data fetched and analyzed successfully.")
+        except Exception as e:
+            st.error(f"Data fetch failed: {e}")
 
-    entry = {
-        "docket_number": None,
-        "application_number": None,
-        "pct_number": None,
-        "wipo_number": None,
-        "due_dates": [],
-        "raw_text": "\n".join(lines)
-    }
+# === Filters Header ===
+st.sidebar.markdown("### Filter Results By")
+show_crystalline = st.sidebar.checkbox("Show Crystalline", value=False)
+show_salt = st.sidebar.checkbox("Show Salt", value=False)
+show_amorphous = st.sidebar.checkbox("Show Amorphous", value=False)
 
-    for line in lines:
-        clean_line = line.replace(" /,", "/").replace("/", "/").replace(",,", ",").replace(" /", "/")
-        clean_line = re.sub(r"[^0-9A-Za-z/,.\s-]", "", clean_line)
-        clean_line = clean_line.replace(",", "")
+# === Main Title ===
+st.title("🔬 The Orange Bookinator")
+st.caption("Automated extraction and analysis of novel drugs with therapeutic equivalence patent claims.")
 
-        if not entry["docket_number"] and PATTERNS["docket_number"].search(clean_line):
-            entry["docket_number"] = PATTERNS["docket_number"].search(clean_line).group(0)
+if "patent_df" in st.session_state and st.session_state["patent_df"] is not None:
+    df = st.session_state["patent_df"]
+    filtered_df = df.copy()
 
-        if not entry["pct_number"] and PATTERNS["pct_number"].search(clean_line):
-            entry["pct_number"] = PATTERNS["pct_number"].search(clean_line).group(0)
+    if show_crystalline:
+        filtered_df = filtered_df[filtered_df["Crystalline"] == True]
+    if show_salt:
+        filtered_df = filtered_df[filtered_df["Salt"] == True]
+    if show_amorphous:
+        filtered_df = filtered_df[filtered_df["Amorphous"] == True]
 
-        if not entry["application_number"] and PATTERNS["application_number"].search(clean_line):
-            entry["application_number"] = PATTERNS["application_number"].search(clean_line).group(0)
-        elif not entry["application_number"] and PATTERNS["alt_application_number"].search(clean_line):
-            entry["application_number"] = PATTERNS["alt_application_number"].search(clean_line).group(0)
-
-        if not entry["wipo_number"] and PATTERNS["wipo_number"].search(clean_line):
-            entry["wipo_number"] = PATTERNS["wipo_number"].search(clean_line).group(0)
-
-        for match in PATTERNS["date"].findall(clean_line):
-            try:
-                parsed = parse(match, dayfirst=False, fuzzy=True)
-                if parsed.date() >= cutoff_date:
-                    entry["due_dates"].append(parsed.strftime("%m/%d/%Y"))
-            except:
-                continue
-
-    if not (entry["docket_number"] or entry["application_number"] or entry["pct_number"] or entry["wipo_number"]):
-        return []
-
-    if entry["due_dates"]:
-        entries.append(entry)
-
-    return entries
-
-def extract_from_pptx(upload, months_back):
-    prs = Presentation(upload)
-    results = []
-
-    for slide_num, slide in enumerate(prs.slides, start=1):
-        for shape_num, shape in enumerate(slide.shapes, start=1):
-            texts = extract_texts_from_shape_recursive(shape)
-            for text in texts:
-                if not should_include(text):
-                    continue
-                entries = extract_entries_from_textbox(text, months_back)
-                for entry in entries:
-                    results.append({
-                        "Slide": slide_num,
-                        "Textbox Content": entry["raw_text"],
-                        "Docket Number": entry["docket_number"],
-                        "Application Number": entry["application_number"],
-                        "PCT Number": entry["pct_number"],
-                        "WIPO Number": entry["wipo_number"],
-                        "Due Dates": "; ".join(entry["due_dates"])
-                    })
-
-    if not results:
-        return pd.DataFrame(columns=["Slide", "Textbox Content", "Docket Number", "Application Number", "PCT Number", "WIPO Number", "Due Dates"])
-
-    df = pd.DataFrame(results)
-    # Extract actual datetime for sorting, then format back to string for display
-    df["Earliest Due Date"] = df["Due Dates"].apply(get_earliest_due_date)
-    df = df.sort_values(by="Earliest Due Date", ascending=True)
-
-    # Reformat to consistent MM/DD/YYYY string for display (optional)
-    df["Due Dates"] = df["Due Dates"].apply(
-        lambda x: "; ".join(
-            sorted([
-                parse(d.strip(), fuzzy=True).strftime("%m/%d/%Y")
-                for d in x.split(";") if d.strip()
-            ])
-        ) if isinstance(x, str) else x
+    # === Editable Table ===
+    st.subheader("📋 Editable Patent Data Table")
+    edited_df = st.data_editor(
+        filtered_df.drop(columns=["Claims"], errors='ignore'),
+        num_rows="dynamic",
+        use_container_width=True,
+        key="editable_table"
     )
-    df = df.drop(columns=["Earliest Due Date"])
 
-    return df
+    if not edited_df.empty:
+        for idx, row in edited_df.iterrows():
+            patent_number = row["Patent Number"]
+            if patent_number in df["Patent Number"].values:
+                mask = df["Patent Number"] == patent_number
+                for col in ["Crystalline", "Salt", "Amorphous"]:
+                    if col in row and pd.notna(row[col]):
+                        df.loc[mask, col] = row[col]
+        st.session_state["patent_df"] = df
 
-# === Streamlit UI ===
-st.title("\U0001F4CA PowerPoint Patent Extractor")
-ppt_files = st.file_uploader("Upload one or more PowerPoint (.pptx) files", type="pptx", accept_multiple_files=True)
-months_back = st.slider("Include due dates up to this many months in the past:", 0, 24, 0)
+    # === Download Button ===
+    if mode == "Single Year":
+        filename = f"Patent_Data_{year}.xlsx"
+    else:
+        filename = f"Patent_Data_{year_range[0]}_{year_range[1]}.xlsx"
 
-if ppt_files:
-    all_dfs = []
-    for ppt_file in ppt_files:
-        df = extract_from_pptx(ppt_file, months_back)
-        if df.empty:
-            st.warning(f"⚠️ No extractable data found in {ppt_file.name}.")
-            continue
-        df["Filename"] = ppt_file.name
-        all_dfs.append(df)
+    with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
+        edited_df.to_excel(writer, index=False, sheet_name="Patent Data")
 
-    if all_dfs:
-        final_df = pd.concat(all_dfs, ignore_index=True)
-        
-        # Globally sort by earliest due date
-        final_df["Earliest Due Date"] = final_df["Due Dates"].apply(get_earliest_due_date)
-        final_df = final_df.sort_values(by="Earliest Due Date", ascending=True).drop(columns=["Earliest Due Date"])
-        
-        st.success(f"✅ Extracted {len(final_df)} entries from {len(all_dfs)} file(s).")
-        st.dataframe(final_df, use_container_width=True)
+    with open(filename, "rb") as file:
+        st.download_button(
+            label="📥 Download Table as Excel",
+            data=file,
+            file_name=filename,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
 
-        output = BytesIO()
-        final_df.to_excel(output, index=False)
-        output.seek(0)
-        st.download_button("\U0001F4E5 Download Excel", output, file_name="combined_extracted_data.xlsx")
+    # === View Claims ===
+    st.subheader("📑 View Patent Claims")
+    selected_patent = st.selectbox("Select Patent Number to View Claims:", edited_df["Patent Number"].dropna().unique())
+    selected_row = df[df["Patent Number"] == selected_patent]
+    if not selected_row.empty:
+        raw_claims = selected_row["Claims"].values[0]
+        formatted_claims = format_claims(raw_claims)
+        st.markdown("#### Patent Claims")
+        st.text_area(
+            label="Claims (formatted for review and copy-paste):",
+            value=formatted_claims,
+            height=700,
+            key="claims_text_area"
+        )
+else:
+    st.info("Use the sidebar to fetch and analyze patent data for the selected year or year range.")
+
+st.markdown("---")
+st.caption("© 2025 Barash Law LLC | Confidential | Internal Use Only")
