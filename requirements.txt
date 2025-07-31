@@ -4,4 +4,4 @@ openpyxl
 xlsxwriter
 requests
 beautifulsoup4
-ftfy
+lxml
