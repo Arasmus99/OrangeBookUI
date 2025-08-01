@@ -5,3 +5,4 @@ xlsxwriter
 requests
 beautifulsoup4
 lxml
+datetime
