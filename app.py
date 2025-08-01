@@ -3,8 +3,9 @@ import re
 import pandas as pd
 from helpers.generate_merged_df import generate_merged_df
 from helpers.formatting import format_claims
+from datetime import datetime
 
-st.set_page_config(page_title="Drug Patent Claim Analyzer", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Novel Drug Search", layout="wide", initial_sidebar_state="expanded")
 
 # === Firm Logo ===
 st.sidebar.image("firm_logo.png", use_container_width=True)
@@ -13,10 +14,13 @@ st.sidebar.markdown("---")
 # === Mode Selection ===
 mode = st.sidebar.radio("Select Data Mode:", ["Single Year", "Range"], horizontal=True)
 
+#Future years cannot be included
+current_year = datetime.now().year
+
 if mode == "Single Year":
-    year = st.sidebar.number_input("Enter FDA Approval Year", min_value=2021, max_value=2025, value=2025)
+    year = st.sidebar.number_input("Enter FDA Approval Year", min_value=2021, max_value=current_year, value=current_year)
 else:
-    year_range = st.sidebar.slider("Select FDA Approval Year Range", min_value=2021, max_value=2025, value=(2021, 2025))
+    year_range = st.sidebar.slider("Select FDA Approval Year Range", min_value=2021, max_value=current_year, value=(2021, current_year))
 
 # === Fetch Button ===
 if st.sidebar.button("Fetch and Analyze Patents"):
@@ -118,4 +122,4 @@ else:
     st.info("Use the sidebar to fetch and analyze patent data for the selected year or year range.")
 
 st.markdown("---")
-st.caption("© 2025 Barash Law LLC | Confidential | Internal Use Only")
+st.caption("© 2025 Barash Law LLC | Internal Use Only")
