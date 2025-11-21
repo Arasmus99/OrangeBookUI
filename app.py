@@ -8,7 +8,7 @@ from datetime import datetime
 st.set_page_config(page_title="Novel Drug Search", layout="wide", initial_sidebar_state="expanded")
 
 # === Firm Logo ===
-st.sidebar.image("firm_logo.png", use_container_width=True)
+st.sidebar.image("firm_logo.png", width='stretch')
 st.sidebar.markdown("---")
 
 # === Mode Selection ===
@@ -73,7 +73,7 @@ if "patent_df" in st.session_state and st.session_state["patent_df"] is not None
     edited_df = st.data_editor(
         filtered_df.drop(columns=["Claims"], errors='ignore'),
         num_rows="dynamic",
-        use_container_width=True,
+        width='stretch',
         key="editable_table"
     )
 
@@ -123,3 +123,4 @@ else:
 
 st.markdown("---")
 st.caption("© 2025 Barash Law LLC | Internal Use Only")
+
